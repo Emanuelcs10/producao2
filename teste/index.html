@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Controle de Produção</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+<div class="max-w-5xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
+  <h1 class="text-2xl font-bold mb-6">Controle de Produção</h1>
+
+  <div class="grid grid-cols-2 gap-4 mb-6">
+    <div>
+      <label class="block mb-1 font-medium">Código do Programa:</label>
+      <input id="codigoBusca" type="text" class="w-full border rounded p-2">
+    </div>
+    <div class="flex items-end">
+      <button onclick="buscarPrograma()" class="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600">
+        Buscar Programa
+      </button>
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Hora de Início:</label>
+      <input id="horaInicio" type="time" class="w-full border rounded p-2">
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Padrão 1:</label>
+      <input id="padrao1" type="number" class="w-full border rounded p-2 bg-gray-100" readonly>
+    </div>
+    <div>
+      <label class="block mb-1 font-medium">Qtd Matrizes:</label>
+      <input id="qtdMatrizes" type="text" class="w-full border rounded p-2 bg-gray-100" readonly>
+    </div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table id="tabelaProducao" class="w-full border border-gray-300 rounded-lg">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">Numeração</th>
+          <th class="border p-2">Qtd Matrizes</th>
+          <th class="border p-2">Saldo de Giros Inicial</th>
+          <th class="border p-2">Saldo de Giros Atual</th>
+          <th class="border p-2">Horas Produzidas</th>
+          <th class="border p-2">Resultado</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Buscar programa no backend
+async function buscarPrograma() {
+  const codigo = document.getElementById("codigoBusca").value;
+  if (!codigo) {
+    alert("Digite o código do programa!");
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:3000/programa/${codigo}`);
+    if (!res.ok) throw new Error("Programa não encontrado");
+
+    const programa = await res.json();
+    preencherTabela(programa);
+  } catch (err) {
+    console.error(err);
+    alert("Erro: " + err.message);
+  }
+}
+
+// Preencher tabela e exibir infos do programa
+function preencherTabela(programa) {
+  // Preenche campos fixos
+  document.getElementById("padrao1").value = programa.padrao1;
+  document.getElementById("qtdMatrizes").value = programa.qtd_matrizes;
+
+  const tbody = document.querySelector("#tabelaProducao tbody");
+  tbody.innerHTML = "";
+
+  programa.dados_matrizaria.forEach(item => {
+    const padrao2 = programa.padrao1 / programa.qtd_matrizes;
+    const padrao3 = padrao2 * item.matrizes;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="border p-2 text-center">${item.numeracao}</td>
+      <td class="border p-2 text-center">${item.matrizes}</td>
+      <td class="border p-2 text-center">${item.girosInicial}</td>
+      <td class="border p-2">
+        <input type="number" class="girosAtual w-full p-1 border rounded" 
+               data-padrao3="${padrao3}" data-giros-inicial="${item.girosInicial}">
+      </td>
+      <td class="border p-2 horas text-center">-</td>
+      <td class="border p-2 result text-center">-</td>
+    `;
+
+    tr.querySelector(".girosAtual").addEventListener("input", calcular);
+    tbody.appendChild(tr);
+  });
+
+  // ⚡ já calcula depois de montar a tabela
+  calcular();
+}
+
+
+// Cálculo automático
+function calcular() {
+  const horaInicio = document.getElementById("horaInicio").value;
+  if (!horaInicio) return;
+
+  const agora = new Date().toLocaleString("en-US", { timeZone: "America/Fortaleza" });
+  const agoraDate = new Date(agora);
+
+  document.querySelectorAll("#tabelaProducao tbody tr").forEach(linha => {
+    const girosInicial = parseFloat(linha.querySelector(".girosAtual").dataset.girosInicial);
+    const padrao3 = parseFloat(linha.querySelector(".girosAtual").dataset.padrao3);
+    const girosAtual = parseFloat(linha.querySelector(".girosAtual").value);
+
+    if (isNaN(girosAtual)) return;
+
+    // Horas produzidas
+    const horasProduzidas = (girosInicial - girosAtual) / padrao3;
+
+    // Converte horaInicio para decimal
+    const [h, m] = horaInicio.split(":").map(Number);
+    const inicioDecimal = h + m / 60;
+
+    // Hora atual Fortaleza em decimal
+    const agoraDecimal = agoraDate.getHours() + agoraDate.getMinutes() / 60;
+
+    // Resultado = (horaInicio + horasProduzidas) - horaAtual
+    const resultadoHoras = inicioDecimal + horasProduzidas - agoraDecimal;
+
+    // Formata horas produzidas
+    const horasProdAbs = Math.floor(horasProduzidas);
+    const minutosProd = Math.round((horasProduzidas - horasProdAbs) * 60);
+    linha.querySelector(".horas").textContent = `${horasProdAbs}h ${minutosProd}min`;
+
+    // Formata resultado
+    const horasAbs = Math.floor(Math.abs(resultadoHoras));
+    const minutos = Math.round((Math.abs(resultadoHoras) - horasAbs) * 60);
+    const resultCell = linha.querySelector(".result");
+    resultCell.textContent = `${resultadoHoras >= 0 ? "" : "-"}${horasAbs}h ${minutos}min`;
+
+    if (resultadoHoras >= 0) {
+      resultCell.classList.add("text-green-600");
+      resultCell.classList.remove("text-red-600");
+    } else {
+      resultCell.classList.add("text-red-600");
+      resultCell.classList.remove("text-green-600");
+    }
+  });
+}
+</script>
+</body>
+</html>
