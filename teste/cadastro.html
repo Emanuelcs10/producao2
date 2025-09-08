@@ -93,7 +93,7 @@ async function salvarPrograma() {
   });
 
   try {
-    const res = await fetch("https://meu-backend.vercel.app/programa", {
+    const res = await fetch("https://producao2-one.vercel.app/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ codigo, padrao1, qtd_matrizes, dados_matrizaria })
