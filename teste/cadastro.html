@@ -3,72 +3,112 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Produção</title>
+<title>Cadastro de Programa</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="p-4 bg-gray-100">
+<body class="bg-gray-100 min-h-screen p-6">
 
-<h1 class="text-2xl font-bold mb-4">Controle de Produção</h1>
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
 
-<div class="mb-4">
-  <label class="block mb-1">Código do Programa:</label>
-  <input type="text" id="codigo" class="border p-2 w-full">
-  <button class="bg-blue-500 text-white px-4 py-2 mt-2" onclick="carregarPrograma()">Carregar</button>
-</div>
+  <h1 class="text-3xl font-bold text-center mb-6">Cadastro de Programa</h1>
 
-<div id="programaDiv" class="hidden">
-  <h2 class="text-xl font-bold mb-2">Matrizaria</h2>
-  <table class="border w-full mb-4">
-    <thead>
-      <tr class="bg-gray-200">
-        <th class="border p-2">Numeração</th>
-        <th class="border p-2">Qtd Matrizes</th>
-        <th class="border p-2">Giros Inicial</th>
-        <th class="border p-2">Horas Produzidas</th>
-        <th class="border p-2">Resultado (min)</th>
-      </tr>
-    </thead>
-    <tbody id="matrizariaBody"></tbody>
-  </table>
+  <!-- Campos principais do programa -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div>
+      <label class="block font-semibold mb-1">Código do Programa</label>
+      <input type="text" id="codigo" class="border rounded p-2 w-full">
+    </div>
+    <div>
+      <label class="block font-semibold mb-1">Padrão 1</label>
+      <input type="number" id="padrao1" class="border rounded p-2 w-full">
+    </div>
+    <div>
+      <label class="block font-semibold mb-1">Qtd Matrizes</label>
+      <select id="qtd_matrizes" class="border rounded p-2 w-full">
+        <option value="12">12</option>
+        <option value="18">18</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tabela de matrizaria -->
+  <h2 class="text-2xl font-bold mb-2">Matrizaria</h2>
+  <div class="overflow-x-auto mb-4">
+    <table class="border w-full table-auto text-center">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border p-2">Numeração</th>
+          <th class="border p-2">Qtd Matrizes</th>
+          <th class="border p-2">Giros Inicial</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaMatrizaria">
+        <tr class="hover:bg-gray-50">
+          <td><input type="number" class="border rounded p-1 w-full numeracao"></td>
+          <td><input type="number" class="border rounded p-1 w-full matrizes"></td>
+          <td><input type="number" class="border rounded p-1 w-full girosInicial"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Botões -->
+  <div class="flex flex-wrap gap-4">
+    <button class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded shadow" onclick="adicionarLinha()">Adicionar Linha</button>
+    <button class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded shadow" onclick="salvarPrograma()">Salvar Programa</button>
+  </div>
+
 </div>
 
 <script>
-function horaAtualFortaleza() {
-  const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  return new Date(utc - 3*60*60000);
+function adicionarLinha() {
+  const tbody = document.getElementById('tabelaMatrizaria');
+  const tr = document.createElement('tr');
+  tr.classList.add('hover:bg-gray-50');
+  tr.innerHTML = `
+    <td><input type="number" class="border rounded p-1 w-full numeracao"></td>
+    <td><input type="number" class="border rounded p-1 w-full matrizes"></td>
+    <td><input type="number" class="border rounded p-1 w-full girosInicial"></td>
+  `;
+  tbody.appendChild(tr);
 }
 
-async function carregarPrograma() {
+async function salvarPrograma() {
   const codigo = document.getElementById('codigo').value;
-  const res = await fetch(`https://producao2-one.vercel.app/${codigo}`);
-  if (!res.ok) { alert('Programa não encontrado'); return; }
-  const data = await res.json();
+  const padrao1 = Number(document.getElementById('padrao1').value);
+  const qtd_matrizes = Number(document.getElementById('qtd_matrizes').value);
 
-  const tbody = document.getElementById('matrizariaBody');
-  tbody.innerHTML = '';
+  const dados_matrizaria = [];
+  document.querySelectorAll('#tabelaMatrizaria tr').forEach(tr => {
+    const numeracaoInput = tr.querySelector('.numeracao');
+    const matrizesInput = tr.querySelector('.matrizes');
+    const girosInput = tr.querySelector('.girosInicial');
 
-  const padrao2 = data.padrao1 / data.qtd_matrizes;
-
-  data.dados_matrizaria.forEach(item => {
-    const padrao3 = padrao2 * item.matrizes;
-    const horaInicial = 6; // exemplo
-    const girosProduzidos = item.girosInicial; // pode atualizar conforme produção
-    const horasProduzidas = ((girosProduzidos / padrao3) - horaInicial) * 0.6;
-    const resultado = ((horaInicial + horasProduzidas) - horaAtualFortaleza().getHours()) * 60; // em minutos
-
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="border p-1">${item.numeracao}</td>
-      <td class="border p-1">${item.matrizes}</td>
-      <td class="border p-1">${item.girosInicial}</td>
-      <td class="border p-1">${Math.abs(Math.round(horasProduzidas*60))} min</td>
-      <td class="border p-1 ${resultado>=0?'text-green-600':'text-red-600'}">${Math.round(resultado)} min</td>
-    `;
-    tbody.appendChild(tr);
+    if (numeracaoInput && matrizesInput && girosInput) {
+      const numeracao = Number(numeracaoInput.value);
+      const matrizes = Number(matrizesInput.value);
+      const girosInicial = Number(girosInput.value);
+      dados_matrizaria.push({ numeracao, matrizes, girosInicial });
+    }
   });
 
-  document.getElementById('programaDiv').classList.remove('hidden');
+  try {
+    const res = await fetch("https://meu-backend.vercel.app/programa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ codigo, padrao1, qtd_matrizes, dados_matrizaria })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Programa salvo com sucesso!");
+    } else {
+      alert("Erro: " + data.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao salvar programa: " + err.message);
+  }
 }
 </script>
 
