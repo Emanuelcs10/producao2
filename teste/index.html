@@ -75,7 +75,7 @@ async function salvarPrograma() {
     dados_matrizaria.push({ numeracao, matrizes, girosInicial });
   });
 
-  const res = await fetch("https://producao2-one.vercel.app/", {
+  const res = await fetch("https://producao2-one.vercel.app/cadastro.html", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ codigo, padrao1, qtd_matrizes, dados_matrizaria })
@@ -88,3 +88,4 @@ async function salvarPrograma() {
 
 </body>
 </html>
+
