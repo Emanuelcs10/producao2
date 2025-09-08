@@ -79,7 +79,7 @@ async function salvarPrograma() {
   const qtd_matrizes = Number(document.getElementById('qtd_matrizes').value);
 
   const dados_matrizaria = [];
-  document.querySelectorAll('#tabelaMatrizaria tr').forEach(tr => {
+  document.querySelectorAll('#tabelaMatrizaria tbody tr').forEach(tr => {
     const numeracaoInput = tr.querySelector('.numeracao');
     const matrizesInput = tr.querySelector('.matrizes');
     const girosInput = tr.querySelector('.girosInicial');
@@ -99,12 +99,31 @@ async function salvarPrograma() {
       body: JSON.stringify({ codigo, padrao1, qtd_matrizes, dados_matrizaria })
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      alert("O backend não retornou JSON válido.");
+      return;
+    }
+
     if (res.ok) {
       alert("Programa salvo com sucesso!");
+      // opcional: limpar formulário
+      document.getElementById('codigo').value = '';
+      document.getElementById('padrao1').value = '';
+      document.getElementById('qtd_matrizes').value = '12';
+      document.getElementById('tabelaMatrizaria').innerHTML = `
+        <tr class="hover:bg-gray-50">
+          <td><input type="number" class="border rounded p-1 w-full numeracao"></td>
+          <td><input type="number" class="border rounded p-1 w-full matrizes"></td>
+          <td><input type="number" class="border rounded p-1 w-full girosInicial"></td>
+        </tr>
+      `;
     } else {
       alert("Erro: " + data.error);
     }
+
   } catch (err) {
     console.error(err);
     alert("Erro ao salvar programa: " + err.message);
