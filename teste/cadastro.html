@@ -1,127 +1,76 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadastro de Programa - Produção de Calçados</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Produção</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-6">
-  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
-    <h1 class="text-2xl font-bold mb-4">Cadastro de Programa</h1>
+<body class="p-4 bg-gray-100">
 
-    <!-- Código do programa -->
-    <div class="mb-4">
-      <label class="block text-gray-700">Código do Programa:</label>
-      <input id="codigo" type="text" class="w-full border rounded p-2">
-    </div>
+<h1 class="text-2xl font-bold mb-4">Controle de Produção</h1>
 
-    <!-- Padrão 1 -->
-    <div class="mb-4">
-      <label class="block text-gray-700">Padrão 1:</label>
-      <input id="padrao1" type="number" class="w-full border rounded p-2" step="0.01">
-    </div>
+<div class="mb-4">
+  <label class="block mb-1">Código do Programa:</label>
+  <input type="text" id="codigo" class="border p-2 w-full">
+  <button class="bg-blue-500 text-white px-4 py-2 mt-2" onclick="carregarPrograma()">Carregar</button>
+</div>
 
-    <!-- Quantidade de matrizes -->
-    <div class="mb-4">
-      <label class="block text-gray-700">Quantidade de Matrizes:</label>
-      <select id="qtdMatrizes" class="w-full border rounded p-2">
-        <option value="12">12</option>
-        <option value="18">18</option>
-      </select>
-    </div>
+<div id="programaDiv" class="hidden">
+  <h2 class="text-xl font-bold mb-2">Matrizaria</h2>
+  <table class="border w-full mb-4">
+    <thead>
+      <tr class="bg-gray-200">
+        <th class="border p-2">Numeração</th>
+        <th class="border p-2">Qtd Matrizes</th>
+        <th class="border p-2">Giros Inicial</th>
+        <th class="border p-2">Horas Produzidas</th>
+        <th class="border p-2">Resultado (min)</th>
+      </tr>
+    </thead>
+    <tbody id="matrizariaBody"></tbody>
+  </table>
+</div>
 
-    <!-- Tabela Matrizaria -->
-    <h2 class="text-xl font-bold mb-2">Matrizaria</h2>
-    <table class="w-full border mb-4" id="tabelaMatrizaria">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="border px-2 py-1">Numeração</th>
-          <th class="border px-2 py-1">Qtd Matrizes</th>
-          <th class="border px-2 py-1">Saldo de Giros Inicial</th>
-          <th class="border px-2 py-1">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="border"><input type="number" class="w-full p-1 numeracao"></td>
-          <td class="border"><input type="number" class="w-full p-1 matrizes"></td>
-          <td class="border"><input type="number" class="w-full p-1 girosInicial"></td>
-          <td class="border text-center">
-            <button onclick="removerLinha(this)" class="bg-red-500 text-white px-2 py-1 rounded">X</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <button onclick="adicionarLinha()" class="bg-blue-500 text-white px-4 py-2 rounded mb-4">Adicionar Linha</button>
+<script>
+function horaAtualFortaleza() {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc - 3*60*60000);
+}
 
-    <!-- Botões -->
-    <div class="flex gap-4">
-      <button onclick="salvarPrograma()" class="bg-green-500 text-white px-4 py-2 rounded">Salvar Programa</button>
-      <button onclick="limparBanco()" class="bg-red-600 text-white px-4 py-2 rounded">Limpar Banco</button>
-    </div>
+async function carregarPrograma() {
+  const codigo = document.getElementById('codigo').value;
+  const res = await fetch(`https://producao2-one.vercel.app/${codigo}`);
+  if (!res.ok) { alert('Programa não encontrado'); return; }
+  const data = await res.json();
 
-    <!-- Mensagem -->
-    <div id="mensagem" class="mt-4 font-bold"></div>
-  </div>
+  const tbody = document.getElementById('matrizariaBody');
+  tbody.innerHTML = '';
 
-  <script>
-    function adicionarLinha() {
-      const tabela = document.querySelector("#tabelaMatrizaria tbody");
-      const linha = document.createElement("tr");
-      linha.innerHTML = `
-        <td class="border"><input type="number" class="w-full p-1 numeracao"></td>
-        <td class="border"><input type="number" class="w-full p-1 matrizes"></td>
-        <td class="border"><input type="number" class="w-full p-1 girosInicial"></td>
-        <td class="border text-center">
-          <button onclick="removerLinha(this)" class="bg-red-500 text-white px-2 py-1 rounded">X</button>
-        </td>
-      `;
-      tabela.appendChild(linha);
-    }
+  const padrao2 = data.padrao1 / data.qtd_matrizes;
 
-    function removerLinha(botao) {
-      botao.closest("tr").remove();
-    }
+  data.dados_matrizaria.forEach(item => {
+    const padrao3 = padrao2 * item.matrizes;
+    const horaInicial = 6; // exemplo
+    const girosProduzidos = item.girosInicial; // pode atualizar conforme produção
+    const horasProduzidas = ((girosProduzidos / padrao3) - horaInicial) * 0.6;
+    const resultado = ((horaInicial + horasProduzidas) - horaAtualFortaleza().getHours()) * 60; // em minutos
 
-    async function salvarPrograma() {
-      const codigo = document.getElementById("codigo").value;
-      const padrao1 = parseFloat(document.getElementById("padrao1").value);
-      const qtdMatrizes = parseInt(document.getElementById("qtdMatrizes").value);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="border p-1">${item.numeracao}</td>
+      <td class="border p-1">${item.matrizes}</td>
+      <td class="border p-1">${item.girosInicial}</td>
+      <td class="border p-1">${Math.abs(Math.round(horasProduzidas*60))} min</td>
+      <td class="border p-1 ${resultado>=0?'text-green-600':'text-red-600'}">${Math.round(resultado)} min</td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-      const dados_matrizaria = [];
-      document.querySelectorAll("#tabelaMatrizaria tbody tr").forEach(tr => {
-        const numeracao = parseFloat(tr.querySelector(".numeracao").value);
-        const matrizes = parseFloat(tr.querySelector(".matrizes").value);
-        const girosInicial = parseFloat(tr.querySelector(".girosInicial").value);
-        if (!isNaN(numeracao) && !isNaN(matrizes) && !isNaN(girosInicial)) {
-          dados_matrizaria.push({ numeracao, matrizes, girosInicial });
-        }
-      });
+  document.getElementById('programaDiv').classList.remove('hidden');
+}
+</script>
 
-      const res = await fetch("/programa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ codigo, padrao1, qtd_matrizes: qtdMatrizes, dados_matrizaria })
-      });
-
-      const data = await res.json();
-      document.getElementById("mensagem").innerText = data.message || data.error;
-      document.getElementById("mensagem").style.color = data.error ? "red" : "green";
-    }
-
-    async function limparBanco() {
-      const senha = prompt("Digite a senha para limpar o banco:");
-      if (senha !== "24112024") {
-        alert("Senha incorreta!");
-        return;
-      }
-
-      const res = await fetch("/programa", { method: "DELETE" });
-      const data = await res.json();
-      document.getElementById("mensagem").innerText = data.message || data.error;
-      document.getElementById("mensagem").style.color = data.error ? "red" : "green";
-    }
-  </script>
 </body>
 </html>

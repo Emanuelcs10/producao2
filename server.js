@@ -2,17 +2,18 @@ import express from "express";
 import bodyParser from "body-parser";
 import pkg from "pg";
 const { Pool } = pkg;
+import "dotenv/config";
 
 const app = express();
 app.use(bodyParser.json());
 
-// Conexão PostgreSQL
+// Conexão Supabase
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // ⚡ use variável de ambiente
-  ssl: { rejectUnauthorized: false } // necessário em alguns hosts
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-// Criar tabelas
+// Criar tabelas se não existirem
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS programas (
@@ -34,24 +35,24 @@ async function initDB() {
 }
 initDB();
 
-// Salvar programa (upsert)
+// Salvar programa
 app.post("/programa", async (req, res) => {
   try {
     const { codigo, padrao1, qtd_matrizes, dados_matrizaria } = req.body;
 
     await pool.query(
       `INSERT INTO programas (codigo, padrao1, qtd_matrizes)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (codigo) DO UPDATE SET padrao1 = EXCLUDED.padrao1, qtd_matrizes = EXCLUDED.qtd_matrizes`,
+       VALUES ($1,$2,$3)
+       ON CONFLICT (codigo) DO UPDATE 
+       SET padrao1 = EXCLUDED.padrao1, qtd_matrizes = EXCLUDED.qtd_matrizes`,
       [codigo, padrao1, qtd_matrizes]
     );
 
     await pool.query(`DELETE FROM matrizaria WHERE programa_codigo = $1`, [codigo]);
-
     for (const item of dados_matrizaria) {
       await pool.query(
         `INSERT INTO matrizaria (programa_codigo, numeracao, matrizes, girosInicial)
-         VALUES ($1, $2, $3, $4)`,
+         VALUES ($1,$2,$3,$4)`,
         [codigo, item.numeracao, item.matrizes, item.girosInicial]
       );
     }
@@ -68,16 +69,12 @@ app.get("/programa/:codigo", async (req, res) => {
   try {
     const { codigo } = req.params;
     const programaRes = await pool.query(`SELECT * FROM programas WHERE codigo = $1`, [codigo]);
-
     if (programaRes.rowCount === 0) return res.status(404).json({ error: "Programa não encontrado" });
 
     const programa = programaRes.rows[0];
     const matrizariaRes = await pool.query(`SELECT * FROM matrizaria WHERE programa_codigo = $1`, [codigo]);
 
-    res.json({
-      ...programa,
-      dados_matrizaria: matrizariaRes.rows
-    });
+    res.json({ ...programa, dados_matrizaria: matrizariaRes.rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro ao buscar programa" });
@@ -87,6 +84,9 @@ app.get("/programa/:codigo", async (req, res) => {
 // Limpar banco (com senha)
 app.delete("/programa", async (req, res) => {
   try {
+    const { senha } = req.body;
+    if (senha !== "24112024") return res.status(403).json({ error: "Senha incorreta" });
+
     await pool.query(`DELETE FROM matrizaria`);
     await pool.query(`DELETE FROM programas`);
     res.json({ message: "Banco limpo com sucesso!" });
@@ -96,6 +96,5 @@ app.delete("/programa", async (req, res) => {
   }
 });
 
-// Iniciar servidor
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 6543;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
