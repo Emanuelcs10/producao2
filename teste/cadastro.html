@@ -12,7 +12,6 @@
 
   <h1 class="text-3xl font-bold text-center mb-6">Cadastro de Programa</h1>
 
-  <!-- Campos principais do programa -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
     <div>
       <label class="block font-semibold mb-1">Código do Programa</label>
@@ -31,7 +30,6 @@
     </div>
   </div>
 
-  <!-- Tabela de matrizaria -->
   <h2 class="text-2xl font-bold mb-2">Matrizaria</h2>
   <div class="overflow-x-auto mb-4">
     <table class="border w-full table-auto text-center">
@@ -52,7 +50,6 @@
     </table>
   </div>
 
-  <!-- Botões -->
   <div class="flex flex-wrap gap-4">
     <button class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded shadow" onclick="adicionarLinha()">Adicionar Linha</button>
     <button class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded shadow" onclick="salvarPrograma()">Salvar Programa</button>
@@ -79,7 +76,7 @@ async function salvarPrograma() {
   const qtd_matrizes = Number(document.getElementById('qtd_matrizes').value);
 
   const dados_matrizaria = [];
-  document.querySelectorAll('#tabelaMatrizaria tbody tr').forEach(tr => {
+  document.querySelectorAll('#tabelaMatrizaria tr').forEach(tr => {
     const numeracaoInput = tr.querySelector('.numeracao');
     const matrizesInput = tr.querySelector('.matrizes');
     const girosInput = tr.querySelector('.girosInicial');
@@ -93,7 +90,7 @@ async function salvarPrograma() {
   });
 
   try {
-    const res = await fetch("https://producao2-one.vercel.app/index.html", {
+    const res = await fetch("/api/programa", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ codigo, padrao1, qtd_matrizes, dados_matrizaria })
@@ -108,8 +105,8 @@ async function salvarPrograma() {
     }
 
     if (res.ok) {
-      alert("Programa salvo com sucesso!");
-      // opcional: limpar formulário
+      alert(data.message);
+      // limpar formulário
       document.getElementById('codigo').value = '';
       document.getElementById('padrao1').value = '';
       document.getElementById('qtd_matrizes').value = '12';
